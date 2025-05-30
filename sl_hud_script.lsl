@@ -37,7 +37,7 @@ default
             llOwnerSay("HTTP-in URL granted: " + gHttpInURL);
             
             // Create the web page URL with the SL URL as parameter
-            gWebPageURL = "https://your-domain.com/index.html?slurl=" + 
+            gWebPageURL = "https://websim.com/@api/second-life-data-bridge?slurl=" + 
                          llEscapeURL(gHttpInURL);
             
             // Set up media on the HUD face
@@ -249,4 +249,3 @@ default
         }
     }
 }
-

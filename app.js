@@ -65,7 +65,8 @@ class SecondLifeBridge {
         if (slURL) {
             this.httpInURL = decodeURIComponent(slURL);
             this.setConnected(true);
-            this.log(`Connected to Second Life: ${this.httpInURL}`, 'system');
+            this.log(`Connected to Second Life HTTP-in URL: ${this.httpInURL}`, 'system');
+            this.log('Ready to send messages to Second Life!', 'system');
         } else {
             // Try to detect if we're running in Second Life media
             this.detectSecondLifeEnvironment();
@@ -78,9 +79,9 @@ class SecondLifeBridge {
             // We might be in SL media - try to get URL from parent or referrer
             try {
                 if (document.referrer && document.referrer.includes('cap.secondlife.com')) {
-                    this.httpInURL = document.referrer;
-                    this.setConnected(true);
-                    this.log('Detected Second Life environment', 'system');
+                    this.log('Detected Second Life media environment', 'system');
+                    this.log('Waiting for HTTP-in URL parameter...', 'system');
+                    return;
                 }
             } catch (e) {
                 console.log('Could not detect SL environment:', e);
@@ -89,7 +90,9 @@ class SecondLifeBridge {
         
         // No demo mode - only real SL connections
         if (!this.isConnected) {
-            this.log('Waiting for Second Life connection. Use the LSL script in your HUD.', 'system');
+            this.log('To connect: 1) Copy the LSL script below', 'system');
+            this.log('2) Put it in a HUD prim in Second Life', 'system');
+            this.log('3) The HUD will load this page with connection info', 'system');
         }
     }
     
