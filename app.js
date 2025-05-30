@@ -34,6 +34,9 @@ class SecondLifeBridge {
         this.elements.clearBtn.addEventListener('click', () => this.clearInput());
         this.elements.clearLogBtn.addEventListener('click', () => this.clearLog());
         
+        // Copy LSL script button
+        document.getElementById('copyLslBtn').addEventListener('click', () => this.copyLslScript());
+        
         // Quick action buttons
         document.querySelectorAll('.quick-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -84,14 +87,10 @@ class SecondLifeBridge {
             }
         }
         
-        // For demo purposes, simulate connection after 2 seconds
-        setTimeout(() => {
-            if (!this.isConnected) {
-                this.httpInURL = 'https://sim1234.agni.lindenlab.com:12046/cap/abc123def456';
-                this.setConnected(true);
-                this.log('Demo mode: Simulated Second Life connection', 'system');
-            }
-        }, 2000);
+        // No demo mode - only real SL connections
+        if (!this.isConnected) {
+            this.log('Waiting for Second Life connection. Use the LSL script in your HUD.', 'system');
+        }
     }
     
     setConnected(connected) {
@@ -118,7 +117,7 @@ class SecondLifeBridge {
         }
         
         if (!this.isConnected || !this.httpInURL) {
-            this.log('Error: Not connected to Second Life', 'error');
+            this.log('Error: Not connected to Second Life. Please use the LSL HUD script.', 'error');
             return;
         }
         
@@ -130,40 +129,41 @@ class SecondLifeBridge {
                 sender: 'web-bridge'
             };
             
-            // In a real SL environment, this would send to the HTTP-in URL
-            const response = await this.simulateSLRequest(payload);
+            // Send to the real SL HTTP-in URL
+            const response = await fetch(this.httpInURL, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
             
-            this.messagesSent++;
-            this.updateStats();
-            
-            this.log(`Sent (${type}): ${content}`, 'sent');
-            
-            // Simulate response from Second Life
-            setTimeout(() => {
-                this.receiveMessage({
-                    type: 'response',
-                    content: `SL received: ${content}`,
-                    timestamp: new Date().toISOString()
-                });
-            }, 500 + Math.random() * 1000);
+            if (response.ok) {
+                this.messagesSent++;
+                this.updateStats();
+                this.log(`Sent (${type}): ${content}`, 'sent');
+                
+                // Try to parse response
+                try {
+                    const responseText = await response.text();
+                    if (responseText) {
+                        this.receiveMessage({
+                            type: 'response',
+                            content: responseText,
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                } catch (e) {
+                    // Response parsing failed, but send was successful
+                }
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             
         } catch (error) {
             this.log(`Error sending message: ${error.message}`, 'error');
         }
-    }
-    
-    async simulateSLRequest(payload) {
-        // In real implementation, this would be:
-        // return fetch(this.httpInURL, {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(payload)
-        // });
-        
-        // Simulation for demo
-        return new Promise((resolve) => {
-            setTimeout(() => resolve({ ok: true }), 100);
-        });
     }
     
     receiveMessage(data) {
@@ -225,6 +225,40 @@ class SecondLifeBridge {
                 `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }, 1000);
     }
+    
+    copyLslScript() {
+        const lslCode = document.getElementById('lslScript').textContent;
+        
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(lslCode).then(() => {
+                this.log('LSL script copied to clipboard!', 'system');
+            }).catch(() => {
+                this.fallbackCopyLslScript(lslCode);
+            });
+        } else {
+            this.fallbackCopyLslScript(lslCode);
+        }
+    }
+    
+    fallbackCopyLslScript(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            this.log('LSL script copied to clipboard!', 'system');
+        } catch (err) {
+            this.log('Could not copy script. Please select and copy manually.', 'error');
+        }
+        
+        document.body.removeChild(textArea);
+    }
 }
 
 // Initialize when DOM is loaded
@@ -239,4 +273,3 @@ document.addEventListener('DOMContentLoaded', () => {
         messagesReceived: window.bridge.messagesReceived
     });
 });
-
